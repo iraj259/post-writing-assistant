@@ -1,0 +1,17 @@
+{
+  "name": "linkedin-post-writer",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.1.24",
+    "@langchain/groq": "^1.1.0",
+    "@langchain/langgraph": "^1.1.4"
+  }
+}
