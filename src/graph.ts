@@ -20,10 +20,10 @@ Behavior:
 
 // call llm
 const response = await model.invoke([
-    new SystemMessage(SYSTEM_PROMPT)
+    new SystemMessage(SYSTEM_PROMPT), ...state.messages
 ])
+return {messages:[response]}
 
-return state
 }
 
 async function critique(state:typeof State.State) {
