@@ -1,8 +1,7 @@
 import { END, START, StateGraph } from '@langchain/langgraph'
 import {State} from './state'
 import { model } from './model'
-import { HumanMessage, SystemMessage } from '@langchain/core/messages'
-import { revision } from 'bun'
+import { AIMessage, HumanMessage, SystemMessage } from '@langchain/core/messages'
 
 async function writer(state:typeof State.State){
 const SYSTEM_PROMPT = `You are a LinkedIn writing assistant for beginner devs (0-2 years). 
@@ -28,8 +27,7 @@ return {messages:[response]}
 }
 
 async function critique(state:typeof State.State) {
-    const SYSTEM_PROMPT = `You are a tough LinkedIn editor for beginner devs. 
-Priority: remove buzzwords/clichés; keep it clear, specific, and relatable.
+const SYSTEM_PROMPT = `You are a LinkedIn post critique. Your task is to give feedback on a previously generated post by the writer agent.
 
 Check against:
 1) Strong hook in 1-2 lines
@@ -37,17 +35,18 @@ Check against:
 3) Specific insights and concrete examples (not generic advice)
 4) Skimmable formatting (short lines, whitespace)
 5) Clear CTA to follow for more
-6) 160-220 words, no emojis, authentic tone, no controversy
+6) 160-220 words, no emojis, authentic tone, no buzzwords, no controversy
 
 Output format (no scores, no questions, no meta):
-Start with:
-“Revise now. Apply ALL changes below. Output only the revised post text.”
+Start with exactly:
+"Revise now. Apply ALL changes below. Output only the revised post text."
+Then list ONLY bullet-point FIXES (edit instructions). Do NOT include any rewritten sentences or paragraphs. Do NOT write the post.
 
-Then list bullet-point FIXES that are direct edit instructions (e.g., “Trim intro to 2 lines with pain-point hook”, “Replace ‘leverage/impactful’ with simple verbs”, “Add 1 analogy for <term>”, “End with CTA: ‘Follow for more bite-sized dev tips’”).`
-
+Return only the fixes.`;
+const lastAIMessage = [...state.messages].reverse().find(m => m.getType()==='ai')
 const response =await model.invoke([
     new SystemMessage(SYSTEM_PROMPT),
-    ...state.messages
+    lastAIMessage as AIMessage
 ])
 
     return {messages: [new HumanMessage(response.content as string)], revisions:state.revisions?state.revisions+1:1}
@@ -62,9 +61,9 @@ return END
 }
 
 // graph
-const graph = new StateGraph(State)
+export const graph = new StateGraph(State)
 .addNode('writer', writer)
 .addNode('critique', critique)
 .addEdge(START, 'writer')
 .addEdge('critique', 'writer')
-.addConditionalEdges('writer', shouldContinue, {END:END, critique:'critique'})
+.addConditionalEdges('writer', shouldContinue, {[END]:END, critique:'critique'})
